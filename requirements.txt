@@ -1,0 +1,12 @@
+torch
+torchvision
+timm
+hiera-transformer
+numpy
+pandas
+scipy
+matplotlib
+Pillow
+PyYAML
+submitit
+wandb

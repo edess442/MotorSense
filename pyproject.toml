@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "emg-pretraining"
+version = "0.1.0"
+description = "Video pretraining with EMG-derived VQ-VAE motor-code targets."
+requires-python = ">=3.9"
+
+[tool.setuptools.packages.find]
+include = ["emg_pretraining*"]

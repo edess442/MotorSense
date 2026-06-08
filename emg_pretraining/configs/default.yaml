@@ -1,0 +1,166 @@
+experiment:
+  name: emg_hiera_code_prediction_small_drop3
+  root: ./experiments
+  seed: 0
+
+model:
+  name: hiera_video_e2e
+  # mode: video
+  mode: image_pair
+
+  variant: hiera_base_16x224
+  checkpoint: mae_k400
+  pretrained: true
+  strict: false
+  dropout: 0.25
+  drop_path: 0.1
+  freeze_backbone: false
+  finetune_last_layer_only: false
+  last_layer_blocks: 1
+  input_layout: BTCHW
+  backbone_ckpt: null
+
+optim:
+  optimizer:
+    name: adamw
+    # lr_backbone: 0.00002 #hiera
+    # lr_head: 0.00002
+    lr_backbone: 0.0002
+    lr_head: 0.0002
+    weight_decay: 0.05
+    layer_decay: 1.0        # set to 0 or 1.0 to disable
+    betas: [0.9, 0.999]
+    eps: 1e-8
+
+  scheduler:
+    name: cosine
+    warmup_epochs: 3
+    min_lr: 1e-6
+
+train:
+  epochs: 30
+  eval_only: false
+  # target_mode: histogram   # histogram | sequence_codes | sequence_embeddings
+  target_mode: histogram
+
+data:
+  emg_root: ./data/EMG
+  example_participant: Eadom_2
+  hand_mode: both
+  bbox_crop_image_scale: 0.1
+  fs: 500
+  vqvae_window_sec: 1.5
+  model_window_sec: 1.5
+  batch_size: 30
+  num_workers: 4
+  num_frames: 16
+  val_recordings:
+    - Merawi_3
+  max_participants: null
+  train_samples_per_epoch: 10000
+  val_samples_per_epoch: 300
+  transforms:
+    train:
+      - type: resize
+        size: [224, 224]
+        antialias: true
+      - type: color_jitter
+        brightness: 0.4
+        contrast: 0.4
+        saturation: 0.4
+        hue: 0.1
+        p: 0.8
+      - type: rand_augment
+        num_ops: 2
+        magnitude: 9
+        magnitude_std: 0.5
+        interpolation: bilinear
+        fill: 128
+      - type: to_image
+      - type: to_dtype
+        dtype: float32
+        scale: true
+      - type: normalize
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+    val:
+      - type: resize
+        size: [224, 224]
+        antialias: true
+      - type: to_image
+      - type: to_dtype
+        dtype: float32
+        scale: true
+      - type: normalize
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+
+checkpoint:
+  enabled: true
+  save_best: true
+  save_last: false
+  monitor: val/loss
+  mode: min
+  save_freq: 10
+
+wandb:
+  entity: null
+  project: emg-pretraining
+  mode: disabled
+  run_name: null
+  visualize_n_samples: 4
+
+distributed:
+  enabled: false
+  backend: nccl
+  init_method: env://
+  master_addr: null
+  master_port: 29500
+
+# slurm:
+#   partition: scavenger
+#   qos: scavenger
+#   account: scavenger
+#   mem: 70G
+#   cpus_per_task: 2
+#   nodes: 8
+#   gpus_per_node: 8
+#   ntasks_per_node: 1
+#   gpu_type: rtxa5000
+#   timeout_hours: 24
+#   signal_delay_s: 90
+#   open_mode: append
+#   wckey: submitit
+
+slurm:
+  partition: scavenger
+  account: scavenger
+  qos: scavenger
+  time: "24:00:00"
+  mem: "120g"
+  cpus_per_task: 4
+  nodes: 8
+  gpus_per_node: 8
+  # gpu_type: "rtxa6000"
+  # gpu_type: 'rtx2080ti'
+  gpu_type: 'rtxa4000'
+  port_range: [20000, 40000]
+  log_dir: slurm_logs
+
+
+
+tokenizers:
+  left_hand:
+    checkpoint_path: ./tokenizers/left_hand/vqvae_020.pt
+    window_sec: 1.5
+    fs: 500
+    run_name: run0019_ed256_ne32_cps64_ews5_llw0.25
+    codes_per_second: 64
+    emg_window_size: 5
+  right_hand:
+    checkpoint_path: ./tokenizers/right_hand/vqvae_020.pt
+    window_sec: 1.5
+    fs: 500
+    run_name: run0019_ed256_ne32_cps64_ews5_llw0.25
+    codes_per_second: 64
+    emg_window_size: 5
